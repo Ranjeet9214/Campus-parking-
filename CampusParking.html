@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CampusPark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: sticky top bar with tabs; one view at a time; summary tiles first, then lot list beside a schematic map. */
+:root{
+  --paper:#f2f5f9; --surface:#ffffff; --ink:#0f1b2d; --muted:#586479; --line:#d8dee8;
+  --sign:#0a4fb5; --sign-ink:#ffffff; --amber:#f2b01e;
+  --ok:#1b8049; --warn:#a85f00; --bad:#c0302a;
+  --font-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0b1322; --surface:#131e33; --ink:#e8edf5; --muted:#92a0b7; --line:#25324b;
+    --sign:#6aa3ff; --sign-ink:#08142a; --amber:#f2b01e;
+    --ok:#4cc58a; --warn:#f0b04a; --bad:#ff7d73; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0b1322; --surface:#131e33; --ink:#e8edf5; --muted:#92a0b7; --line:#25324b;
+  --sign:#6aa3ff; --sign-ink:#08142a; --amber:#f2b01e;
+  --ok:#4cc58a; --warn:#f0b04a; --bad:#ff7d73; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.5 var(--font-body);min-height:100%}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1{font-size:2.4rem;line-height:1.05}
+h2{font-size:1.5rem}
+h3{font-size:1.2rem}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+
+/* top bar */
+header.top{background:var(--sign);color:var(--sign-ink);position:sticky;top:0;z-index:20}
+.bar{display:flex;align-items:center;gap:20px;min-height:60px;flex-wrap:wrap;padding-block:8px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:1.5rem;letter-spacing:.02em}
+.brand .p{width:34px;height:34px;border-radius:8px;background:var(--sign-ink);color:var(--sign);display:grid;place-items:center;font-size:1.5rem;line-height:1}
+.brand small{display:block;font:500 .68rem/1 var(--font-body);letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+nav.tabs{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+nav.tabs a{color:inherit;text-decoration:none;padding:8px 14px;border-radius:8px;font-weight:500;opacity:.88}
+nav.tabs a:hover{background:rgb(255 255 255 / .14);opacity:1}
+nav.tabs a[aria-current="page"]{background:var(--sign-ink);color:var(--sign);opacity:1}
+.theme-btn{background:transparent;border:1px solid rgb(255 255 255 / .45);color:inherit;border-radius:8px;padding:6px 12px;cursor:pointer}
+.theme-btn:hover{background:rgb(255 255 255 / .14)}
+
+/* hero */
+.hero-band{background:radial-gradient(800px 320px at 88% 0%,rgb(242 176 30 / .22),transparent 62%),radial-gradient(600px 300px at 0% 100%,rgb(60 120 255 / .22),transparent 60%),linear-gradient(180deg,#0a1222,#142443);color:#eef3fb;position:relative;overflow:hidden;border-bottom:5px solid var(--amber)}
+.hero-band::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 98px,rgb(255 255 255 / .09) 98px 101px);-webkit-mask-image:linear-gradient(180deg,transparent 30%,#000);mask-image:linear-gradient(180deg,transparent 30%,#000);pointer-events:none}
+.hero2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.8fr);gap:36px;align-items:center;padding-block:48px 56px;position:relative}
+@media (max-width:860px){.hero2{grid-template-columns:minmax(0,1fr);padding-block:32px 40px}}
+.eyebrow{display:inline-block;font:600 .75rem/1 var(--font-body);letter-spacing:.14em;text-transform:uppercase;color:var(--amber);border:1px solid rgb(242 176 30 / .5);border-radius:99px;padding:6px 12px;margin-bottom:16px}
+.hero-band h1{font-size:clamp(2.7rem,6.4vw,4.6rem);line-height:.98;text-transform:uppercase}
+.hero-band h1 .hl{color:var(--amber)}
+.hero-band p.lead{color:#b9c6dc;max-width:52ch;margin-top:16px;font-size:1.05rem}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.hero-band .btn{background:var(--amber);color:#1a1200;padding:12px 22px;font-size:1rem}
+.hero-band .btn.ghost{background:transparent;color:#eef3fb;border:1px solid rgb(255 255 255 / .35)}
+.hero-band .btn.ghost:hover{background:rgb(255 255 255 / .1)}
+.gauge{background:rgb(255 255 255 / .07);border:1px solid rgb(255 255 255 / .16);border-radius:22px;padding:22px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:grid;gap:14px;justify-items:center;box-shadow:0 24px 60px rgb(0 0 0 / .35)}
+.gauge .ring{position:relative;width:200px;height:200px}
+.gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.gauge .ring .c{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.gauge .ring b{font:700 3.6rem/1 var(--font-display)}
+.gauge .ring span{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:#b9c6dc}
+.gauge .split{display:flex;gap:22px;font-size:.85rem;color:#b9c6dc}
+.gauge .split b{color:#fff;font-family:var(--font-display);font-size:1.3rem}
+.hero-band .live{color:#b9c6dc;margin-top:18px}
+.live{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.tile{border-top:3px solid var(--sign)}
+.tile:nth-child(2){border-top-color:var(--amber)}
+.tile:nth-child(3){border-top-color:var(--ok)}
+.lot{transition:transform .15s,box-shadow .15s}
+.lot:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgb(10 30 70 / .14)}
+.lot{--c:var(--ok)}
+.lot[data-s="warn"]{--c:var(--warn)}
+.lot[data-s="bad"]{--c:var(--bad)}
+.bays{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:2px}
+.bays i{aspect-ratio:1/1.6;border-radius:2px;background:var(--c)}
+.bays i.u{background:var(--line)}
+.bayskey{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:-4px}
+.mapcard{background:linear-gradient(180deg,var(--surface),var(--paper))}
+@media (prefers-reduced-motion: reduce){.lot{transition:none}.lot:hover{transform:none}}
+
+/* glass layer: translucent surfaces over a colour-blob backdrop */
+body{background-color:var(--paper)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+   radial-gradient(560px 460px at 6% 14%,rgb(10 79 181 / .30),transparent 65%),
+   radial-gradient(520px 440px at 94% 28%,rgb(242 176 30 / .30),transparent 65%),
+   radial-gradient(640px 500px at 50% 100%,rgb(27 128 73 / .20),transparent 65%),
+   radial-gradient(420px 360px at 70% 62%,rgb(120 90 255 / .14),transparent 65%)}
+.tile,.lot,.card,.plan,.bk,.tw,.seg,.empty,.modal,.fee{
+  background:color-mix(in srgb,var(--surface) 52%,transparent);
+  -webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5);
+  border-color:color-mix(in srgb,#fff 42%,var(--line));
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .55),0 10px 34px rgb(15 35 80 / .10)}
+:root[data-theme="dark"] .tile,:root[data-theme="dark"] .lot,:root[data-theme="dark"] .card,:root[data-theme="dark"] .plan,:root[data-theme="dark"] .bk,:root[data-theme="dark"] .tw,:root[data-theme="dark"] .seg,:root[data-theme="dark"] .empty,:root[data-theme="dark"] .modal,:root[data-theme="dark"] .fee{
+  border-color:rgb(255 255 255 / .12);box-shadow:inset 0 1px 0 rgb(255 255 255 / .10),0 10px 34px rgb(0 0 0 / .35)}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .tile,:root:not([data-theme="light"]) .lot,:root:not([data-theme="light"]) .card,:root:not([data-theme="light"]) .plan,:root:not([data-theme="light"]) .bk,:root:not([data-theme="light"]) .tw,:root:not([data-theme="light"]) .seg,:root:not([data-theme="light"]) .empty,:root:not([data-theme="light"]) .modal,:root:not([data-theme="light"]) .fee{
+    border-color:rgb(255 255 255 / .12);box-shadow:inset 0 1px 0 rgb(255 255 255 / .10),0 10px 34px rgb(0 0 0 / .35)}
+}
+.lot{border-left-width:6px}
+.mapcard{background:color-mix(in srgb,var(--surface) 52%,transparent)}
+.mapcard svg > rect:first-child{fill:transparent}
+.field input,.field select{background:color-mix(in srgb,var(--surface) 60%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+th{background:color-mix(in srgb,var(--paper) 55%,transparent)}
+.chip{background:color-mix(in srgb,var(--surface) 55%,transparent)}
+header.top{background:color-mix(in srgb,var(--sign) 76%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.6);backdrop-filter:blur(16px) saturate(1.6);border-bottom:1px solid rgb(255 255 255 / .25)}
+.scrim{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.modal{background:color-mix(in srgb,var(--surface) 78%,transparent)}
+.btn.ghost:hover{background:color-mix(in srgb,var(--surface) 70%,transparent)}
+.bk svg{background:rgb(255 255 255 / .9)}
+.toast{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);background:color-mix(in srgb,var(--ink) 88%,transparent)}
+.live i{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion: reduce){.live i{animation:none}}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.tile .k{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tile .v{font-family:var(--font-display);font-size:2.3rem;font-weight:700;line-height:1.1}
+.tile .s{font-size:.82rem;color:var(--muted)}
+
+/* controls */
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{background:none;border:0;padding:8px 16px;cursor:pointer;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--sign);color:var(--sign-ink)}
+.btn{background:var(--sign);color:var(--sign-ink);border:0;border-radius:9px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--paper)}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+.btn.sm{padding:5px 11px;font-size:.85rem}
+
+/* find view */
+.find{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start;margin-top:12px}
+@media (max-width:900px){.find{grid-template-columns:minmax(0,1fr)}}
+.lots{display:grid;gap:12px}
+.lot{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--ok);border-radius:12px;padding:14px 16px;display:grid;gap:10px}
+.lot[data-s="warn"]{border-left-color:var(--warn)}
+.lot[data-s="bad"]{border-left-color:var(--bad)}
+.lot header{display:flex;justify-content:space-between;gap:10px;align-items:start;flex-wrap:wrap}
+.lot .meta{color:var(--muted);font-size:.85rem}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:600;border:1px solid currentColor}
+.pill.ok{color:var(--ok)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--bad)} .pill.mute{color:var(--muted)}
+.meter{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.meter b{display:block;height:100%;background:var(--ok);transition:width .6s}
+.lot[data-s="warn"] .meter b{background:var(--warn)}
+.lot[data-s="bad"] .meter b{background:var(--bad)}
+.counts{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline}
+.counts span b{font-family:var(--font-display);font-size:1.6rem}
+.counts span{color:var(--muted);font-size:.85rem}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:.75rem;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:1px 8px;color:var(--muted)}
+.lot footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.mapcard svg{width:100%;height:auto;display:block}
+.mapcard .blk{cursor:pointer}
+.mapcard .blk:focus-visible rect{stroke:var(--amber);stroke-width:3}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* sections */
+section.view{display:none;padding-bottom:56px}
+section.view.on{display:block}
+.head{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin:26px 0 12px}
+.head p{color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:6px}
+.plan .price{font-family:var(--font-display);font-size:2rem;font-weight:700}
+.plan .price small{font:400 .8rem var(--font-body);color:var(--muted)}
+.plan ul{margin:4px 0 0;padding-left:18px;color:var(--muted);font-size:.88rem}
+
+/* forms */
+.form{display:grid;gap:12px}
+.field{display:grid;gap:4px}
+.field label{font-size:.82rem;font-weight:600;color:var(--muted)}
+.field input,.field select{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+.field input:focus,.field select:focus{outline:3px solid var(--amber);outline-offset:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.err{color:var(--bad);font-size:.82rem;min-height:1.1em}
+.fee{display:flex;justify-content:space-between;align-items:baseline;background:var(--paper);border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
+.fee b{font-family:var(--font-display);font-size:1.7rem}
+
+/* bookings */
+.bk{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.bk + .bk{margin-top:10px}
+.bk svg{width:64px;height:64px;color:var(--ink);background:#fff;border-radius:6px;padding:4px}
+.bk .code{font-family:var(--font-mono);font-weight:500;letter-spacing:.04em}
+.bk.cancelled{opacity:.55}
+@media (max-width:560px){.bk{grid-template-columns:auto 1fr}.bk .act{grid-column:1/-1}}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+
+/* tables */
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);font-size:.9rem;vertical-align:middle}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--paper)}
+tr:last-child td{border-bottom:0}
+td .btn+.btn{margin-left:6px}
+
+/* chart */
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--font-body)}
+
+/* modal + toast */
+.scrim{position:fixed;inset:0;background:rgb(5 10 20 / .6);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.scrim.on{display:flex}
+.modal{background:var(--surface);border-radius:14px;max-width:460px;width:100%;max-height:92vh;overflow:auto;padding:20px;display:grid;gap:14px;border:1px solid var(--line)}
+.modal .top{display:flex;justify-content:space-between;align-items:start;gap:10px}
+.x{background:none;border:0;font-size:1.5rem;line-height:1;cursor:pointer;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:10px;z-index:60;display:none;max-width:90vw}
+.toast.on{display:block}
+footer.site{border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;padding:18px 0 30px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap bar">
+    <div class="brand"><span class="p" aria-hidden="true">P</span><span>CampusPark<small>Parking office</small></span></div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#find" data-tab="find">Find parking</a>
+      <a href="#bookings" data-tab="bookings">My bookings</a>
+      <a href="#permits" data-tab="permits">Permits</a>
+      <a href="#admin" data-tab="admin">Admin desk</a>
+    </nav>
+    <button class="theme-btn" id="themeBtn" type="button">Dark mode</button>
+  </div>
+</header>
+
+<div class="hero-band" id="heroBand">
+  <div class="wrap hero2">
+    <div>
+      <span class="eyebrow">Smart campus parking</span>
+      <h1>Find a bay <span class="hl">before</span> you reach the gate</h1>
+      <p class="lead">Live availability for every lot on campus. Reserve a two-wheeler or car bay in seconds, or apply for a semester permit.</p>
+      <div class="hero-cta">
+        <a class="btn" href="#lots-anchor" id="heroFind" style="text-decoration:none">Reserve a bay</a>
+        <a class="btn ghost" href="#permits" style="text-decoration:none">Get a permit</a>
+      </div>
+      <div class="live"><i></i><span id="stamp">Updated just now</span></div>
+    </div>
+    <div class="gauge" aria-label="Campus availability">
+      <div class="ring">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="rgb(255 255 255 / .14)" stroke-width="10"/>
+          <circle id="gring" cx="60" cy="60" r="52" fill="none" stroke="#f2b01e" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .8s"/>
+        </svg>
+        <div class="c"><b class="num" id="gnum">0%</b><span>of bays free</span></div>
+      </div>
+      <div class="split"><span><b class="num" id="g2">0</b> two-wheeler</span><span><b class="num" id="g4">0</b> car</span></div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+
+<!-- FIND -->
+<section class="view" id="v-find">
+  <div class="tiles" id="tiles" style="margin-top:24px"></div>
+
+  <div class="row">
+    <div class="seg" role="group" aria-label="Vehicle type" id="vfilter">
+      <button type="button" data-v="all" aria-pressed="true">All vehicles</button>
+      <button type="button" data-v="two" aria-pressed="false">Two-wheeler</button>
+      <button type="button" data-v="car" aria-pressed="false">Car</button>
+    </div>
+    <div class="seg" role="group" aria-label="Sort" id="sorter">
+      <button type="button" data-s="free" aria-pressed="true">Most free</button>
+      <button type="button" data-s="name" aria-pressed="false">A to Z</button>
+    </div>
+  </div>
+
+  <div class="find" id="lots-anchor">
+    <div class="lots" id="lots"></div>
+    <div class="card mapcard">
+      <h3>Campus map</h3>
+      <p style="color:var(--muted);font-size:.85rem;margin:2px 0 8px">Schematic, not to scale. Select a lot to reserve.</p>
+      <svg viewBox="0 0 400 330" role="img" aria-label="Schematic campus map showing lot occupancy" id="map"></svg>
+      <div class="legend">
+        <span><i style="background:var(--ok)"></i>Open</span>
+        <span><i style="background:var(--warn)"></i>Filling up</span>
+        <span><i style="background:var(--bad)"></i>Almost full</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BOOKINGS -->
+<section class="view" id="v-bookings">
+  <div class="head"><div><h2>My bookings</h2><p>Show the pass code at the gate. Bookings are held for 30 minutes after the arrival time.</p></div>
+    <button class="btn" type="button" id="goFind">Reserve a bay</button></div>
+  <div id="bklist"></div>
+</section>
+
+<!-- PERMITS -->
+<section class="view" id="v-permits">
+  <div class="head"><div><h2>Parking permits</h2><p>Permit holders park free in their assigned lots and can still reserve a bay in advance.</p></div></div>
+  <div class="plans" id="plans"></div>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card">
+      <h3>Apply for a permit</h3>
+      <form class="form" id="permitForm" novalidate style="margin-top:10px">
+        <div class="field"><label for="pn">Full name</label><input id="pn" autocomplete="name" required></div>
+        <div class="two">
+          <div class="field"><label for="pid">Roll or employee ID</label><input id="pid" required></div>
+          <div class="field"><label for="pcat">Category</label>
+            <select id="pcat"><option value="student">Student</option><option value="staff">Faculty / staff</option><option value="hosteller">Hostel resident</option></select></div>
+        </div>
+        <div class="two">
+          <div class="field"><label for="pv">Vehicle number</label><input id="pv" placeholder="KA01AB1234" autocapitalize="characters" required></div>
+          <div class="field"><label for="pt">Vehicle type</label>
+            <select id="pt"><option value="two">Two-wheeler</option><option value="car">Car</option></select></div>
+        </div>
+        <div class="err" id="perr" role="alert"></div>
+        <button class="btn" type="submit">Submit application</button>
+      </form>
+    </div>
+    <div class="card">
+      <h3>My applications</h3>
+      <div id="applist" style="margin-top:10px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ADMIN -->
+<section class="view" id="v-admin">
+  <div class="head"><div><h2>Admin desk</h2><p>Security and parking office view. Sample data for demonstration.</p></div></div>
+  <div class="tiles" id="atiles"></div>
+  <div class="grid2">
+    <div class="card chart"><h3>Campus occupancy today</h3><p style="color:var(--muted);font-size:.85rem">Share of all bays in use, by hour.</p><div id="chart"></div></div>
+    <div class="card"><h3>Gate log</h3><div id="gatelog" style="margin-top:8px"></div></div>
+  </div>
+  <div class="head"><h2>Permit applications</h2></div>
+  <div class="tw"><table><thead><tr><th>Applicant</th><th>ID</th><th>Vehicle</th><th>Category</th><th>Status</th><th></th></tr></thead><tbody id="apptbl"></tbody></table></div>
+  <div class="head"><h2>Violations</h2></div>
+  <div class="tw"><table><thead><tr><th>Vehicle</th><th>Lot</th><th>Issue</th><th>Reported</th><th>Status</th><th></th></tr></thead><tbody id="viotbl"></tbody></table></div>
+</section>
+
+</main>
+
+<footer class="site"><div class="wrap">CampusPark demo. Lot counts move on their own to show live updates; bookings and applications stay in this browser only.</div></footer>
+
+<div class="scrim" id="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt" id="modal"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+
+/* ---------- data ---------- */
+var LOTS=[
+ {id:"A",name:"Main Gate Lot",walk:"2 min to Admin Block",cap:{two:120,car:60},used:{two:78,car:41},ev:4,covered:false,who:"All"},
+ {id:"B",name:"Library Block",walk:"1 min to Central Library",cap:{two:80,car:30},used:{two:71,car:22},ev:2,covered:true,who:"All"},
+ {id:"C",name:"Hostel Row",walk:"3 min to Hostels 1 to 4",cap:{two:200,car:20},used:{two:96,car:17},ev:0,covered:false,who:"Students"},
+ {id:"D",name:"Sports Complex",walk:"4 min to Auditorium",cap:{two:60,car:80},used:{two:12,car:25},ev:6,covered:false,who:"All"},
+ {id:"E",name:"Faculty Enclave",walk:"1 min to Department Blocks",cap:{two:40,car:50},used:{two:29,car:44},ev:6,covered:true,who:"Staff"}
+];
+var MAPPOS={A:[20,20,150,90],B:[190,20,190,70],C:[20,135,150,80],D:[20,235,200,80],E:[240,125,140,110]};
+var RATES={two:10,car:20};
+var PLANS=[
+ {id:"s2",title:"Student, two-wheeler",price:600,per:"semester",pts:["Main Gate, Library and Hostel lots","Free reservations","Valid for 6 months"]},
+ {id:"s4",title:"Student, car",price:2400,per:"semester",pts:["Main Gate, Sports Complex lots","Free reservations","Valid for 6 months"]},
+ {id:"f4",title:"Faculty and staff",price:3000,per:"year",pts:["All lots including Faculty Enclave","Covered bay allocation","Valid for 12 months"]}
+];
+var hours=[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
+var CURVE=[12,28,55,78,86,88,81,74,79,72,58,36,22,14,8];
+
+/* ---------- state ---------- */
+var S={v:"all",sort:"free",bookings:[],apps:[],tabs:null};
+var ADMIN={
+ apps:[
+  {id:"AP-2041",name:"Rohan Mehta",pid:"21CS118",veh:"KA05MN4821",type:"two",cat:"Student",st:"Pending"},
+  {id:"AP-2042",name:"Dr. Kavitha Rao",pid:"FAC-0342",veh:"KA03HC7710",type:"car",cat:"Staff",st:"Pending"},
+  {id:"AP-2039",name:"Ananya Iyer",pid:"22EC067",veh:"KA01JB3395",type:"two",cat:"Hostel",st:"Approved"}
+ ],
+ vio:[
+  {id:1,veh:"KA02XY9087",lot:"Library Block",issue:"Parked in fire lane",at:"09:42",st:"Open"},
+  {id:2,veh:"KA51AB1120",lot:"Main Gate Lot",issue:"No valid permit",at:"10:15",st:"Open"},
+  {id:3,veh:"KA04PQ6632",lot:"Faculty Enclave",issue:"Student vehicle in staff lot",at:"11:03",st:"Fined"}
+ ],
+ gate:[
+  ["12:48","KA01AB4410","Entry","Main Gate Lot"],
+  ["12:44","KA05CD2231","Exit","Library Block"],
+  ["12:41","KA03MJ7005","Entry","Sports Complex"],
+  ["12:37","KA09EF1189","Entry","Main Gate Lot"],
+  ["12:30","KA02GH5522","Exit","Hostel Row"]
+ ]
+};
+try{
+ var sv=JSON.parse(localStorage.getItem("campuspark")||"null");
+ if(sv){S.bookings=sv.bookings||[];S.apps=sv.apps||[];}
+}catch(e){}
+function save(){try{localStorage.setItem("campuspark",JSON.stringify({bookings:S.bookings,apps:S.apps}))}catch(e){}}
+
+/* ---------- helpers ---------- */
+function free(l,t){return Math.max(0,l.cap[t]-l.used[t])}
+function freeSel(l){return S.v==="all"?free(l,"two")+free(l,"car"):free(l,S.v)}
+function capSel(l){return S.v==="all"?l.cap.two+l.cap.car:l.cap[S.v]}
+function status(l){
+ var f=freeSel(l),c=capSel(l),p=f/c;
+ if(f===0)return {k:"bad",t:"Full"};
+ if(p<.12)return {k:"bad",t:"Almost full"};
+ if(p<.3)return {k:"warn",t:"Filling up"};
+ return {k:"ok",t:"Open"};
+}
+function tname(t){return t==="two"?"Two-wheeler":"Car"}
+function toast(m){var t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(function(){t.classList.remove("on")},3200)}
+function normPlate(s){return String(s).toUpperCase().replace(/[\s-]/g,"")}
+var PLATE=/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{4}$/;
+function dayStr(off){var d=new Date();d.setDate(d.getDate()+off);return d.toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}
+function hash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function glyph(code){
+ var h=hash(code),r="",n=7,x,y,seed=h;
+ function nx(){seed=Math.imul(seed,1103515245)+12345>>>0;return seed>>>16&1}
+ function finder(ox,oy){return '<rect x="'+ox+'" y="'+oy+'" width="3" height="3" fill="currentColor"/><rect x="'+(ox+.6)+'" y="'+(oy+.6)+'" width="1.8" height="1.8" fill="#fff"/><rect x="'+(ox+1.1)+'" y="'+(oy+1.1)+'" width=".8" height=".8" fill="currentColor"/>'}
+ for(y=0;y<n;y++)for(x=0;x<n;x++){
+  if((x<3&&y<3)||(x>3&&y<3)||(x<3&&y>3))continue;
+  if(nx())r+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="currentColor"/>';
+ }
+ return '<svg viewBox="0 0 7 7" aria-hidden="true">'+r+finder(0,0)+finder(4,0)+finder(0,4)+'</svg>';
+}
+
+/* ---------- find view ---------- */
+function renderTiles(){
+ var ft=0,fc=0,ct=0,cc=0,ev=0;
+ LOTS.forEach(function(l){ft+=free(l,"two");fc+=free(l,"car");ct+=l.cap.two;cc+=l.cap.car;ev+=l.ev});
+ var pct=Math.round((1-(ft+fc)/(ct+cc))*100);
+ var fp=100-pct;
+ $("#gnum").textContent=fp+"%";$("#g2").textContent=ft;$("#g4").textContent=fc;
+ $("#gring").setAttribute("stroke-dashoffset",(326.7*(1-fp/100)).toFixed(1));
+ $("#tiles").innerHTML=
+  tile("Two-wheeler bays free",ft,"of "+ct)+tile("Car bays free",fc,"of "+cc)+
+  tile("Campus occupancy",pct+"%","across 5 lots")+tile("EV charging bays",ev,"in 3 lots");
+}
+function tile(k,v,s){return '<div class="tile"><div class="k">'+k+'</div><div class="v num">'+v+'</div><div class="s">'+s+'</div></div>'}
+
+function bayGrid(f,c,w){
+ var N=30,fc=Math.round(f/c*N);if(f>0&&fc<1)fc=1;
+ var h="";for(var i=0;i<N;i++)h+='<i'+(i<fc?'':' class="u"')+'></i>';
+ return '<div class="bays" role="img" aria-label="'+f+' of '+c+' bays free, '+w+' percent full">'+h+'</div><div class="bayskey"><span>Free</span><span>Taken</span></div>';
+}
+function renderLots(){
+ var list=LOTS.slice();
+ if(S.sort==="free")list.sort(function(a,b){return freeSel(b)-freeSel(a)});
+ else list.sort(function(a,b){return a.name.localeCompare(b.name)});
+ $("#lots").innerHTML=list.map(function(l){
+  var st=status(l),f=freeSel(l),c=capSel(l),used=c-f,w=Math.round(used/c*100);
+  var counts=S.v==="all"
+   ?'<span><b class="num">'+free(l,"two")+'</b> two-wheeler free</span><span><b class="num">'+free(l,"car")+'</b> car free</span>'
+   :'<span><b class="num">'+f+'</b> of '+c+' '+tname(S.v).toLowerCase()+' bays free</span>';
+  return '<article class="lot" data-s="'+st.k+'">'+
+   '<header><div><h3>'+esc(l.name)+'</h3><div class="meta">'+esc(l.walk)+'</div></div><span class="pill '+st.k+'">'+st.t+'</span></header>'+
+   bayGrid(f,c,w)+
+   '<div class="counts">'+counts+'</div>'+
+   '<footer><div class="chips"><span class="chip">'+esc(l.who)+' only</span>'+(l.covered?'<span class="chip">Covered</span>':'')+(l.ev?'<span class="chip">'+l.ev+' EV bays</span>':'')+'</div>'+
+   '<button class="btn sm" type="button" data-book="'+l.id+'"'+(f===0?' disabled':'')+'>Reserve a bay</button></footer></article>';
+ }).join("");
+}
+function renderMap(){
+ var out='<rect x="0" y="0" width="400" height="330" rx="10" fill="var(--paper)"/>'+
+  '<path d="M10 118 H390 M180 10 V320" stroke="var(--line)" stroke-width="10" fill="none"/>'+
+  '<text x="205" y="318" font-size="10" fill="var(--muted)" font-family="IBM Plex Sans">Main road</text>';
+ LOTS.forEach(function(l){
+  var p=MAPPOS[l.id],st=status(l),col="var(--"+st.k+")";
+  var f=freeSel(l);
+  out+='<g class="blk" tabindex="0" role="button" data-book="'+l.id+'" aria-label="'+esc(l.name)+', '+st.t+', '+f+' bays free">'+
+   '<rect x="'+p[0]+'" y="'+p[1]+'" width="'+p[2]+'" height="'+p[3]+'" rx="8" fill="'+col+'" fill-opacity=".18" stroke="'+col+'" stroke-width="2"/>'+
+   '<text x="'+(p[0]+12)+'" y="'+(p[1]+26)+'" font-size="15" font-weight="700" fill="var(--ink)" font-family="Barlow Condensed">'+esc(l.name)+'</text>'+
+   '<text x="'+(p[0]+12)+'" y="'+(p[1]+p[3]-14)+'" font-size="22" font-weight="700" fill="'+col+'" font-family="Barlow Condensed">'+f+' free</text></g>';
+ });
+ $("#map").innerHTML=out;
+}
+function renderFind(){renderTiles();renderLots();renderMap()}
+
+/* ---------- booking modal ---------- */
+function openModal(html){$("#modal").innerHTML=html;$("#scrim").classList.add("on");var f=$("#modal input,#modal select,#modal button");if(f)f.focus()}
+function closeModal(){$("#scrim").classList.remove("on")}
+function openBook(id){
+ var l=LOTS.filter(function(x){return x.id===id})[0];if(!l)return;
+ var t=new Date();t.setMinutes(0,0,0);t.setHours(t.getHours()+1);
+ var hh=("0"+t.getHours()).slice(-2)+":00";
+ var def=S.v==="car"?"car":"two";
+ openModal(
+ '<div class="top"><div><h2 id="mt">Reserve at '+esc(l.name)+'</h2><p style="color:var(--muted);font-size:.85rem">'+esc(l.walk)+' · '+esc(l.who)+' only</p></div><button class="x" type="button" id="mx" aria-label="Close">&times;</button></div>'+
+ '<form class="form" id="bform" novalidate>'+
+  '<div class="two"><div class="field"><label for="bt">Vehicle type</label><select id="bt"><option value="two"'+(def==="two"?" selected":"")+'>Two-wheeler</option><option value="car"'+(def==="car"?" selected":"")+'>Car</option></select></div>'+
+  '<div class="field"><label for="br">I am a</label><select id="br"><option value="student">Student</option><option value="staff">Faculty / staff</option><option value="visitor">Visitor</option></select></div></div>'+
+  '<div class="field"><label for="bv">Vehicle number</label><input id="bv" placeholder="KA01AB1234" autocapitalize="characters" required></div>'+
+  '<div class="two"><div class="field"><label for="bd">Day</label><select id="bd"><option value="0">Today, '+dayStr(0)+'</option><option value="1">Tomorrow, '+dayStr(1)+'</option></select></div>'+
+  '<div class="field"><label for="bh">Arrival time</label><input id="bh" type="time" value="'+hh+'"></div></div>'+
+  '<div class="field"><label for="bl">Duration</label><select id="bl">'+[1,2,3,4,6,8].map(function(n){return '<option value="'+n+'">'+n+' hour'+(n>1?'s':'')+'</option>'}).join("")+'</select></div>'+
+  '<div class="fee"><span id="feeNote" style="color:var(--muted);font-size:.85rem"></span><b class="num" id="fee">₹0</b></div>'+
+  '<div class="err" id="berr" role="alert"></div>'+
+  '<div class="row" style="justify-content:flex-end"><button class="btn ghost" type="button" id="bc">Cancel</button><button class="btn" type="submit">Confirm booking</button></div>'+
+ '</form>');
+ function fee(){
+  var role=$("#br").value,t=$("#bt").value,h=+$("#bl").value;
+  var amt=role==="visitor"?RATES[t]*h:0;
+  $("#fee").textContent="₹"+amt;
+  $("#feeNote").textContent=role==="visitor"?"₹"+RATES[t]+" per hour for visitors":"Free with a valid permit";
+ }
+ ["#br","#bt","#bl"].forEach(function(s){$(s).addEventListener("change",fee)});fee();
+ $("#mx").onclick=$("#bc").onclick=closeModal;
+ $("#bform").addEventListener("submit",function(e){
+  e.preventDefault();
+  var t=$("#bt").value,role=$("#br").value,plate=normPlate($("#bv").value),off=+$("#bd").value,h=+$("#bl").value,time=$("#bh").value,err=$("#berr");
+  if(!PLATE.test(plate)){err.textContent="Enter a vehicle number like KA01AB1234.";return}
+  if(!time){err.textContent="Choose an arrival time.";return}
+  if(l.who==="Staff"&&role!=="staff"){err.textContent="This lot is for faculty and staff. Choose another lot.";return}
+  if(l.who==="Students"&&role==="visitor"){err.textContent="This lot is for students. Choose another lot.";return}
+  if(off===0&&free(l,t)<1){err.textContent="No "+tname(t).toLowerCase()+" bays are free right now.";return}
+  var dup=S.bookings.some(function(b){return b.status==="active"&&b.plate===plate&&b.off===off});
+  if(dup){err.textContent="This vehicle already has a booking for that day.";return}
+  var code="CP-"+l.id+("0000"+(hash(plate+time+Date.now())%100000)).slice(-5);
+  S.bookings.unshift({code:code,lot:l.id,lotName:l.name,type:t,plate:plate,off:off,date:dayStr(off),time:time,hours:h,fee:role==="visitor"?RATES[t]*h:0,status:"active",role:role});
+  if(off===0)l.used[t]+=1;
+  save();closeModal();renderAll();toast("Booked. Your pass code is "+code);
+  location.hash="bookings";
+ });
+}
+
+/* ---------- bookings ---------- */
+function renderBookings(){
+ var el=$("#bklist");
+ if(!S.bookings.length){el.innerHTML='<div class="empty"><h3>No bookings yet</h3><p>Reserve a bay and your pass code will appear here.</p></div>';return}
+ el.innerHTML=S.bookings.map(function(b){
+  var live=b.status==="active";
+  return '<div class="bk'+(live?'':' cancelled')+'">'+glyph(b.code)+
+  '<div><div class="code">'+esc(b.code)+'</div><div><strong>'+esc(b.lotName)+'</strong> · '+tname(b.type)+' · <span class="mono">'+esc(b.plate)+'</span></div>'+
+  '<div style="color:var(--muted);font-size:.85rem">'+esc(b.date)+', '+esc(b.time)+' for '+b.hours+' hour'+(b.hours>1?'s':'')+' · '+(b.fee?'₹'+b.fee+' due at exit':'No charge')+'</div></div>'+
+  '<div class="act">'+(live?'<button class="btn danger sm" type="button" data-cancel="'+esc(b.code)+'">Cancel</button>':'<span class="pill mute">Cancelled</span>')+'</div></div>';
+ }).join("");
+}
+
+/* ---------- permits ---------- */
+function renderPermits(){
+ $("#plans").innerHTML=PLANS.map(function(p){
+  return '<div class="plan"><h3>'+p.title+'</h3><div class="price num">₹'+p.price.toLocaleString("en-IN")+' <small>per '+p.per+'</small></div><ul>'+p.pts.map(function(x){return '<li>'+x+'</li>'}).join("")+'</ul></div>';
+ }).join("");
+ var el=$("#applist");
+ if(!S.apps.length){el.innerHTML='<div class="empty">No applications yet.</div>';return}
+ el.innerHTML=S.apps.map(function(a){
+  var st=statusOf(a.id),k=st==="Approved"?"ok":st==="Rejected"?"bad":"warn";
+  return '<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)"><div><strong>'+esc(a.id)+'</strong> · <span class="mono">'+esc(a.veh)+'</span><div style="color:var(--muted);font-size:.82rem">'+esc(a.name)+', '+esc(a.cat)+'</div></div><span class="pill '+k+'">'+st+'</span></div>';
+ }).join("");
+}
+function statusOf(id){var a=ADMIN.apps.filter(function(x){return x.id===id})[0];return a?a.st:"Pending"}
+function syncAdminApps(){
+ S.apps.forEach(function(a){if(!ADMIN.apps.some(function(x){return x.id===a.id}))ADMIN.apps.unshift({id:a.id,name:a.name,pid:a.pid,veh:a.veh,type:a.type,cat:a.cat,st:"Pending"})});
+}
+$("#permitForm").addEventListener("submit",function(e){
+ e.preventDefault();
+ var n=$("#pn").value.trim(),id=$("#pid").value.trim(),veh=normPlate($("#pv").value),err=$("#perr");
+ if(!n||!id){err.textContent="Enter your name and ID.";return}
+ if(!PLATE.test(veh)){err.textContent="Enter a vehicle number like KA01AB1234.";return}
+ var cat=$("#pcat").selectedOptions[0].textContent;
+ var app={id:"AP-"+(2050+S.apps.length+1),name:n,pid:id,veh:veh,type:$("#pt").value,cat:cat};
+ S.apps.unshift(app);save();syncAdminApps();err.textContent="";this.reset();renderPermits();renderAdmin();
+ toast("Application "+app.id+" submitted. The parking office reviews it within 2 working days.");
+});
+
+/* ---------- admin ---------- */
+function renderAdmin(){
+ var open=ADMIN.vio.filter(function(v){return v.st==="Open"}).length;
+ var pend=ADMIN.apps.filter(function(a){return a.st==="Pending"}).length;
+ var ct=0,cu=0;LOTS.forEach(function(l){ct+=l.cap.two+l.cap.car;cu+=l.used.two+l.used.car});
+ $("#atiles").innerHTML=tile("Bays in use",cu,"of "+ct)+tile("Active bookings",S.bookings.filter(function(b){return b.status==="active"}).length,"from this browser")+tile("Permits to review",pend,"pending")+tile("Open violations",open,"need action");
+ /* chart */
+ var W=560,H=230,L=34,B=26,T=10,bw=(W-L-8)/hours.length,out="",i;
+ [0,25,50,75,100].forEach(function(g){var y=T+(H-T-B)*(1-g/100);out+='<line x1="'+L+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+g+'%</text>'});
+ var nowH=new Date().getHours();
+ hours.forEach(function(h,i){
+  var v=CURVE[i],bh=(H-T-B)*v/100,x=L+i*bw+4,y=H-B-bh,cur=h===nowH;
+  out+='<rect x="'+x+'" y="'+y+'" width="'+(bw-8)+'" height="'+bh+'" rx="3" fill="'+(cur?"var(--amber)":"var(--sign)")+'"><title>'+h+':00, '+v+'% full</title></rect>';
+  if(i%2===0)out+='<text x="'+(x+(bw-8)/2)+'" y="'+(H-8)+'" text-anchor="middle">'+h+':00</text>';
+ });
+ $("#chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Hourly occupancy chart, peak about 88 percent at 11:00">'+out+'</svg>';
+ $("#gatelog").innerHTML=ADMIN.gate.map(function(g){return '<div class="row" style="justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)"><span class="mono">'+g[0]+'</span><span class="mono">'+g[1]+'</span><span class="pill '+(g[2]==="Entry"?"ok":"mute")+'">'+g[2]+'</span><span style="color:var(--muted);font-size:.85rem">'+esc(g[3])+'</span></div>'}).join("");
+ $("#apptbl").innerHTML=ADMIN.apps.map(function(a){
+  var k=a.st==="Approved"?"ok":a.st==="Rejected"?"bad":"warn";
+  return '<tr><td>'+esc(a.name)+'<div style="color:var(--muted);font-size:.8rem">'+esc(a.id)+'</div></td><td class="mono">'+esc(a.pid)+'</td><td class="mono">'+esc(a.veh)+' <span style="color:var(--muted);font-family:var(--font-body)">'+tname(a.type)+'</span></td><td>'+esc(a.cat)+'</td><td><span class="pill '+k+'">'+a.st+'</span></td><td>'+
+   (a.st==="Pending"?'<button class="btn sm" type="button" data-appr="'+esc(a.id)+'">Approve</button><button class="btn danger sm" type="button" data-rej="'+esc(a.id)+'">Reject</button>':'')+'</td></tr>';
+ }).join("");
+ $("#viotbl").innerHTML=ADMIN.vio.map(function(v){
+  var k=v.st==="Open"?"bad":v.st==="Fined"?"warn":"ok";
+  return '<tr><td class="mono">'+esc(v.veh)+'</td><td>'+esc(v.lot)+'</td><td>'+esc(v.issue)+'</td><td class="mono">'+v.at+'</td><td><span class="pill '+k+'">'+v.st+'</span></td><td>'+
+   (v.st==="Open"?'<button class="btn sm" type="button" data-fine="'+v.id+'">Issue ₹500 fine</button><button class="btn ghost sm" type="button" data-clear="'+v.id+'">Dismiss</button>':'')+'</td></tr>';
+ }).join("");
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",function(e){
+ var t=e.target.closest("[data-book],[data-cancel],[data-appr],[data-rej],[data-fine],[data-clear]");
+ if(!t)return;
+ if(t.dataset.book){openBook(t.dataset.book);return}
+ if(t.dataset.cancel){
+  var b=S.bookings.filter(function(x){return x.code===t.dataset.cancel})[0];
+  if(b&&b.status==="active"){b.status="cancelled";if(b.off===0){var l=LOTS.filter(function(x){return x.id===b.lot})[0];if(l)l.used[b.type]=Math.max(0,l.used[b.type]-1)}save();renderAll();toast("Booking "+b.code+" cancelled.")}
+  return;
+ }
+ var id=t.dataset.appr||t.dataset.rej;
+ if(id){var a=ADMIN.apps.filter(function(x){return x.id===id})[0];if(a){a.st=t.dataset.appr?"Approved":"Rejected";renderAdmin();renderPermits();toast(id+" "+a.st.toLowerCase()+".")}return}
+ var vid=+(t.dataset.fine||t.dataset.clear);
+ var v=ADMIN.vio.filter(function(x){return x.id===vid})[0];
+ if(v){v.st=t.dataset.fine?"Fined":"Dismissed";renderAdmin();toast(t.dataset.fine?"Fine issued to "+v.veh+".":"Violation dismissed.")}
+});
+document.addEventListener("keydown",function(e){
+ if(e.key==="Escape")closeModal();
+ if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("g.blk")){e.preventDefault();openBook(e.target.dataset.book)}
+});
+$("#scrim").addEventListener("mousedown",function(e){if(e.target===this)closeModal()});
+$("#vfilter").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.v=b.dataset.v;$$("#vfilter button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});renderFind()});
+$("#sorter").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.sort=b.dataset.s;$$("#sorter button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});renderLots()});
+$("#goFind").onclick=function(){location.hash="find"};
+$("#heroFind").addEventListener("click",function(e){e.preventDefault();$("#lots-anchor").scrollIntoView({behavior:"smooth",block:"start"})});
+
+/* theme */
+var root=document.documentElement;
+$("#themeBtn").addEventListener("click",function(){
+ var dark=root.getAttribute("data-theme")==="dark"||(!root.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme: dark)").matches);
+ root.setAttribute("data-theme",dark?"light":"dark");
+ $("#themeBtn").textContent=dark?"Dark mode":"Light mode";
+});
+if(matchMedia("(prefers-color-scheme: dark)").matches)$("#themeBtn").textContent="Light mode";
+
+/* routing */
+var TABS=["find","bookings","permits","admin"];
+function route(){
+ var h=(location.hash||"").replace("#","");if(TABS.indexOf(h)<0)h="find";
+ TABS.forEach(function(t){$("#v-"+t).classList.toggle("on",t===h)});
+ $("#heroBand").style.display=h==="find"?"":"none";
+ $$("nav.tabs a").forEach(function(a){if(a.dataset.tab===h)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+ window.scrollTo(0,0);
+}
+window.addEventListener("hashchange",route);
+
+function renderAll(){renderFind();renderBookings();renderPermits();renderAdmin()}
+
+/* live drift */
+function tick(){
+ LOTS.forEach(function(l){["two","car"].forEach(function(t){
+  var d=Math.random()<.5?0:(Math.random()<.5?-1:1);
+  if(Math.random()<.18)d*=2;
+  l.used[t]=Math.min(l.cap[t],Math.max(Math.round(l.cap[t]*.2),l.used[t]+d));
+ })});
+ $("#stamp").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+ if($("#v-find").classList.contains("on")&&!$("#scrim").classList.contains("on"))renderFind();
+}
+setInterval(tick,6000);
+
+syncAdminApps();
+renderAll();route();
+})();
+</script>
+</body>
+</html>
